@@ -16,12 +16,14 @@ os.environ.setdefault(
 )
 import pytest
 from sqlalchemy import event
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.sql.expression import BinaryExpression
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.sql.expression import BinaryExpression
+
 from app.database import Base
+
 
 # 1. Compile postgresql.ARRAY and JSONB to TEXT/JSON on SQLite
 @compiles(ARRAY, "sqlite")
@@ -105,13 +107,13 @@ async def test_engine():
                     item = json.loads(item_str)
                 except Exception:
                     item = item_str
-                
+
                 if isinstance(item, list):
                     return all(x in arr for x in item)
                 return item in arr
             except Exception:
                 return False
-                
+
         dbapi_connection.create_function("array_contains", 2, array_contains)
 
     async with engine.begin() as conn:

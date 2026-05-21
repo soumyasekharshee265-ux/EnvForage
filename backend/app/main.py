@@ -1,6 +1,7 @@
 """
 FastAPI application factory and lifespan management.
 """
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -12,7 +13,7 @@ from app.config import get_settings
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # type: ignore[type-arg]
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application startup and shutdown."""
     # Startup
     settings = get_settings()

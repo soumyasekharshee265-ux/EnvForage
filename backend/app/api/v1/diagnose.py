@@ -10,7 +10,7 @@ from app.compatibility.errors import (
     UnknownVersionError,
     UnsupportedOSError,
 )
-from app.compatibility.models import PackageConstraint
+from app.compatibility.models import OSTarget, PackageConstraint
 from app.compatibility.resolver import CompatibilityResolver
 from app.models.diagnostic import DiagnosticReport
 from app.schemas.diagnostic import (
@@ -35,6 +35,7 @@ async def diagnose(
     and what issues were found.
     """
     # Map OS to OSTarget: "LINUX", "WSL", "WIN"
+    target_os: OSTarget
     if report.os and report.os.wsl_version:
         target_os = "WSL"
     elif report.os and "windows" in report.os.name.lower():
@@ -61,7 +62,7 @@ async def diagnose(
     compatible_profiles: list[str] = []
     recommendations: list[str] = []
 
-    profiles, _ = await list_profiles(db, ProfileFilters())
+    profiles, _ = await list_profiles(db, ProfileFilters(tags=None, os=None, cuda_required=None, page=1, limit=20))
     resolver = CompatibilityResolver()
 
     for profile in profiles:
@@ -77,7 +78,7 @@ async def diagnose(
         try:
             resolved = resolver.resolve(
                 packages=packages,
-                python_version=report.active_python.version if report.active_python else None,
+                python_version=(report.active_python.version if report.active_python else None) or "3.10",
                 cuda_version=report.cuda.version if report.cuda else None,
                 rocm_version=report.rocm.version if report.rocm else None,
                 target_os=target_os,

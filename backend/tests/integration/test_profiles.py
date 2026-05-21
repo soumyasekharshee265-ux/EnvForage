@@ -1,10 +1,11 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from app.main import app
-from app.database import get_db
-from app.models.profile import EnvironmentProfile, ProfilePackage
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+
+from app.database import get_db
+from app.main import app
+from app.models.profile import EnvironmentProfile
 
 pytestmark = pytest.mark.asyncio
 
@@ -136,7 +137,7 @@ async def test_create_duplicate_slug_conflict(client):
         "os_support": ["LINUX"],
         "python_versions": ["3.10"],
     }
-    
+
     # First creation
     res1 = await client.post("/api/v1/profiles", json=profile_data)
     assert res1.status_code == 201
