@@ -7,14 +7,11 @@ All detector tests mock subprocess / platform — no nvidia-smi required.
 from __future__ import annotations
 
 import sys
-from unittest.mock import MagicMock, patch
-if sys.platform != "win32":
-    sys.modules["winreg"] = MagicMock()
-
 import json
 from pathlib import Path
 from unittest import runner
 from pydoc import cli
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -122,6 +119,7 @@ class TestOSDetector:
                 result = _detect_wsl()
         assert result is None
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="requires winreg/Windows")
     @patch("winreg.OpenKey")
     @patch("winreg.QueryValueEx")
     @patch("platform.release")
@@ -138,6 +136,7 @@ class TestOSDetector:
         assert result.version == "22H2 (Build 19045)"
         assert result.architecture == "AMD64"
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="requires winreg/Windows")
     @patch("winreg.OpenKey")
     @patch("winreg.QueryValueEx")
     @patch("platform.release")
@@ -153,6 +152,7 @@ class TestOSDetector:
         assert result.name == "Windows 11 Home Single Language"
         assert result.version == "21H2 (Build 22000)"
 
+    @pytest.mark.skipif(sys.platform != "win32", reason="requires winreg/Windows")
     @patch("winreg.OpenKey")
     @patch("winreg.QueryValueEx")
     @patch("platform.release")
