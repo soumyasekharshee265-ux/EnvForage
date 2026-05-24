@@ -12,7 +12,7 @@ backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from app.schemas.seed_profile import ProfileSeedSchema, ProfilesYamlSchema
+from app.schemas.seed_profile import ProfileSeedSchema, ProfilesYamlSchema  # noqa: E402
 
 
 def validate_logical_consistency(profile: ProfileSeedSchema) -> list[str]:

@@ -155,6 +155,34 @@ async def test_complete_connection_error():
 
 
 # -----------------------------
+# TIMEOUT ERROR TEST (NEW)
+# -----------------------------
+
+@pytest.mark.asyncio
+async def test_complete_timeout_error():
+
+    provider = OllamaProvider()
+
+    mock_client = AsyncMock()
+
+    mock_client.post.side_effect = httpx.ReadTimeout(
+        "Request timed out"
+    )
+
+    with patch("httpx.AsyncClient") as mock_async_client:
+
+        mock_async_client.return_value.__aenter__.return_value = mock_client
+
+        with pytest.raises(LLMProviderError):
+
+            await provider.complete(
+                "system",
+                "user",
+                MockResponse,
+            )
+
+
+# -----------------------------
 # STREAM SUCCESS TEST
 # -----------------------------
 
@@ -271,4 +299,32 @@ async def test_stream_connection_error():
                 MockResponse,
             ):
                 pass
-            
+
+
+# -----------------------------
+# STREAM TIMEOUT ERROR (NEW)
+# -----------------------------
+
+@pytest.mark.asyncio
+async def test_stream_timeout_error():
+
+    provider = OllamaProvider()
+
+    mock_client = Mock()
+
+    mock_client.stream.side_effect = httpx.ReadTimeout(
+        "Request timed out"
+    )
+
+    with patch("httpx.AsyncClient") as mock_async_client:
+
+        mock_async_client.return_value.__aenter__.return_value = mock_client
+
+        with pytest.raises(LLMProviderError):
+
+            async for _ in provider.stream(
+                "system",
+                "user",
+                MockResponse,
+            ):
+                pass
