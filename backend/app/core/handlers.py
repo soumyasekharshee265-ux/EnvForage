@@ -84,3 +84,16 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         redacted = _redact_validation_errors(list(exc.errors()))
         logger.warning("Validation error: %s", redacted)
+        return _error_response(
+            422, "VALIDATION_ERROR", "Request validation failed.", redacted
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(
+        request: Request,
+        exc: Exception,
+    ) -> JSONResponse:
+        logger.exception("Unhandled exception: %s", exc)
+        return _error_response(
+            500, "INTERNAL_SERVER_ERROR", "An unexpected error occurred.", {}
+        )
