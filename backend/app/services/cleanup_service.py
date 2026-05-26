@@ -1,6 +1,6 @@
 """Background cleanup service for expired script generation records."""
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +16,7 @@ GENERATED_SCRIPTS_RETENTION_DAYS = 7
 
 async def delete_expired_records(db: AsyncSession) -> dict:
     """Delete expired records based on retention policy."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     jobs_cutoff = now - timedelta(days=SCRIPT_GENERATION_JOBS_RETENTION_DAYS)
     scripts_cutoff = now - timedelta(days=GENERATED_SCRIPTS_RETENTION_DAYS)
 
