@@ -27,7 +27,7 @@ from app.config import get_settings
 from app.core.handlers import register_exception_handlers
 from app.database import AsyncSessionLocal
 from app.middleware.payload_size import PayloadSizeLimitMiddleware
-
+from app.middleware.metrics import setup_metrics
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
