@@ -9,11 +9,13 @@ def fetch_pypi_python_requires(package: str, version: str | None = None) -> None
     """
     Fetches the Requires-Python metadata from PyPI for a given package and version.
     This script is used to automate the verification of Python compatibility matrices.
-    Uses local JSON file-based caching inside `.pypi_cache` to optimize performance.
+    Uses local JSON file-based caching inside `~/.envforge/cache` to optimize performance with a 12-hour TTL.
     """
     import os
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    cache_dir = os.path.join(script_dir, ".pypi_cache")
+    import time
+    
+    # Store cache under ~/.envforge/cache per issue #386 spec
+    cache_dir = os.path.expanduser("~/.envforge/cache")
     os.makedirs(cache_dir, exist_ok=True)
     
     safe_pkg = "".join(c for c in package if c.isalnum() or c in ".-_")
@@ -21,7 +23,18 @@ def fetch_pypi_python_requires(package: str, version: str | None = None) -> None
     cache_file = os.path.join(cache_dir, f"{safe_pkg}_{safe_ver}.json")
 
     data = None
+    cache_valid = False
+    
+    # Check if cache file exists and is less than 12 hours (43200 seconds) old
     if os.path.exists(cache_file):
+        try:
+            mtime = os.path.getmtime(cache_file)
+            if time.time() - mtime < 43200:
+                cache_valid = True
+        except Exception as e:
+            print(f"[WARN] Failed to read cache file metadata: {e}")
+
+    if cache_valid:
         try:
             with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -37,7 +50,8 @@ def fetch_pypi_python_requires(package: str, version: str | None = None) -> None
         try:
             print(f"[Cache Miss] Fetching metadata for {package} {version or 'latest'} from PyPI...")
             req = urllib.request.Request(url, headers={'User-Agent': 'EnvForage/1.0'})
-            with urllib.request.urlopen(req) as response:
+            # Added 10s timeout to prevent hanging connections
+            with urllib.request.urlopen(req, timeout=10) as response:
                 raw_response = response.read().decode('utf-8')
                 data = json.loads(raw_response)
                 
