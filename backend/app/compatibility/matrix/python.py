@@ -2,20 +2,23 @@
 Python Version Compatibility Matrix.
 
 Maps ML framework versions to their supported Python version ranges.
+Data is now dynamically generated and loaded from python_matrix_data.json.
 
 Sources:
-  - PyTorch: https://pytorch.org/get-started/locally/ (Python support column)
+  - PyPI Metadata (Requires-Python) for Python version constraints.
+  - PyTorch: https://pytorch.org/get-started/locally/
   - TensorFlow: https://www.tensorflow.org/install/pip#software_requirements
   - Ultralytics YOLOv8: https://docs.ultralytics.com/quickstart/
-  - Diffusers: https://huggingface.co/docs/diffusers/installation
-
-TODO: Automate this from PyPI metadata in a future phase.
 """
+
+import json
+from pathlib import Path
+
 from app.compatibility.models import FrameworkVersionEntry
 
 # ── Framework Version → Python Compatibility ──────────────────────────────────
 
-PYTHON_MATRIX: dict[str, list[FrameworkVersionEntry]] = {
+_HARDCODED_MATRIX: dict[str, list[FrameworkVersionEntry]] = {
     "torch": [
         FrameworkVersionEntry(
             framework="torch", version="2.0.0",
@@ -77,14 +80,14 @@ PYTHON_MATRIX: dict[str, list[FrameworkVersionEntry]] = {
             min_python="3.8", max_python="3.12",
             supported_python=["3.8", "3.9", "3.10", "3.11", "3.12"],
             supported_cuda=["11.8", "12.1", "12.4"],
-            supported_rocm=["6.0.0"],
+            supported_rocm=["6.0.0", "6.1.0"],
         ),
         FrameworkVersionEntry(
             framework="torch", version="2.5.0",
             min_python="3.9", max_python="3.13",
             supported_python=["3.9", "3.10", "3.11", "3.12", "3.13"],
             supported_cuda=["11.8", "12.1", "12.4"],
-            supported_rocm=["6.0.0"],
+            supported_rocm=["6.2.0"],
         ),
     ],
     "tensorflow": [
@@ -141,7 +144,56 @@ PYTHON_MATRIX: dict[str, list[FrameworkVersionEntry]] = {
             supported_cuda=["11.8", "12.1", "12.4"],
         ),
     ],
+    "diffusers": [
+        # Hugging Face Diffusers — CUDA support comes via PyTorch dependency.
+        # Source: https://huggingface.co/docs/diffusers/installation
+        # Source: https://github.com/huggingface/diffusers/releases
+        FrameworkVersionEntry(
+            framework="diffusers", version="0.21.0",
+            min_python="3.8", max_python="3.11",
+            supported_python=["3.8", "3.9", "3.10", "3.11"],
+            supported_cuda=["11.7", "11.8", "12.1"],
+        ),
+        FrameworkVersionEntry(
+            framework="diffusers", version="0.24.0",
+            min_python="3.8", max_python="3.11",
+            supported_python=["3.8", "3.9", "3.10", "3.11"],
+            supported_cuda=["11.8", "12.1"],
+        ),
+        FrameworkVersionEntry(
+            framework="diffusers", version="0.25.0",
+            min_python="3.8", max_python="3.12",
+            supported_python=["3.8", "3.9", "3.10", "3.11", "3.12"],
+            supported_cuda=["11.8", "12.1"],
+        ),
+        FrameworkVersionEntry(
+            framework="diffusers", version="0.26.0",
+            min_python="3.8", max_python="3.12",
+            supported_python=["3.8", "3.9", "3.10", "3.11", "3.12"],
+            supported_cuda=["11.8", "12.1"],
+        ),
+        FrameworkVersionEntry(
+            framework="diffusers", version="0.27.0",
+            min_python="3.8", max_python="3.12",
+            supported_python=["3.8", "3.9", "3.10", "3.11", "3.12"],
+            supported_cuda=["11.8", "12.1"],
+        ),
+        FrameworkVersionEntry(
+            framework="diffusers", version="0.27.2",
+            min_python="3.8", max_python="3.12",
+            supported_python=["3.8", "3.9", "3.10", "3.11", "3.12"],
+            supported_cuda=["11.8", "12.1"],
+        ),
+    ],
 }
+MATRIX_JSON_PATH = Path(__file__).resolve().parent / "python_matrix_data.json"
+
+with open(MATRIX_JSON_PATH) as f:
+    _raw_data = json.load(f)
+
+PYTHON_MATRIX: dict[str, list[FrameworkVersionEntry]] = dict(_HARDCODED_MATRIX)
+for _framework, _entries in _raw_data.items():
+    PYTHON_MATRIX[_framework] = [FrameworkVersionEntry(**kwargs) for kwargs in _entries]
 
 
 def get_framework_versions(framework: str) -> list[FrameworkVersionEntry]:
