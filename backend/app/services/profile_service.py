@@ -5,7 +5,7 @@ Profile service — business logic for profile CRUD operations.
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -143,7 +143,7 @@ async def get_cached_profile_by_slug(
     if redis:
         cached_data = await redis.get(cache_key)
         if cached_data:
-            return json.loads(cached_data)
+            return cast(dict[str, Any], json.loads(cached_data))
 
     profile = await get_profile_by_slug(db, slug)
 
