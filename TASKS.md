@@ -45,7 +45,7 @@
 - [x] **Step 32: Global Search Modal UI** (Target: `frontend/src/components/SearchModal.tsx`)
 - [x] **Step 33: Client-Side Search Indexer** (Target: `frontend/src/lib/search.ts`)
 - [x] **Step 34: Documentation Pagination** (Target: `frontend/src/components/DocsPagination.tsx`)
-- [ ] **Step 35: Version Selector Dropdown** (Target: `frontend/src/app/docs/layout.tsx`)
+- [x] **Step 35: Version Selector Dropdown** (Target: `frontend/src/app/docs/layout.tsx`)
 - [ ] **Step 36: Mobile Drawer Navigation** (Target: `frontend/src/components/DocsMobileNav.tsx`)
 
 ## Milestone 4: Terminal Loader & Diagnostics UX
