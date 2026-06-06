@@ -98,50 +98,12 @@ async def diagnose(
         created_at=datetime.utcnow(),
     )
     db.add(db_report)
-    await db.flush()
-
-    # Fetch every profile using pagination
-    all_profiles = []
-    page = 1
-    while True:
-        batch, total = await list_profiles(
-            db,
-            ProfileFilters(
-                tags=None,
-                os=None,
-                cuda_required=None,
-                page=page,
-                limit=_PROFILE_PAGE_SIZE,
-            ),
-        )
-        all_profiles.extend(batch)
-        if len(all_profiles) >= total:
-            break
-        page += 1
-
-    # Serialize profiles for Celery
-    profiles_data = []
-    for p in all_profiles:
-        profiles_data.append({
-            "slug": p.slug,
-            "os_support": p.os_support,
-            "cuda_required": p.cuda_required,
-            "rocm_required": getattr(p, "rocm_required", False),
-            "packages": [
-                {
-                    "package_name": pkg.package_name,
-                    "version_spec": pkg.version_spec,
-                    "cuda_variant": pkg.cuda_variant,
-                }
-                for pkg in sorted(p.packages, key=lambda item: item.install_order)
-            ]
-        })
+    await db.commit()
 
     task = run_diagnose_task.delay(
         str(db_report.id),
         report.model_dump(),
         target_os,
-        profiles_data,
     )
 
     return TaskResponse(task_id=task.id, status=task.status)
@@ -155,7 +117,8 @@ async def diagnose(
 )
 async def diagnose_status(task_id: str) -> DiagnoseTaskStatus:
     """Check the status of a queued diagnostic analysis."""
-    result = AsyncResult(task_id)
+    from app.worker import celery_app
+    result = celery_app.AsyncResult(task_id)
     if result.ready():
         if result.successful():
             return DiagnoseTaskStatus(task_id=task_id, status=result.status, result=DiagnoseResponse(**result.result))

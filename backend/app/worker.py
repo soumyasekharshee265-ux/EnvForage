@@ -30,7 +30,7 @@ celery_app.conf.update(
 from typing import Literal
 
 @celery_app.task(name="run_diagnose_task")
-def run_diagnose_task(report_id: str, report_data: dict, target_os: Literal['LINUX', 'WIN', 'WSL'], profiles_data: list[dict]) -> dict:
+def run_diagnose_task(report_id: str, report_data: dict, target_os: Literal['LINUX', 'WIN', 'WSL']) -> dict:
     """
     Celery task that resolves an environment's dependencies against all profiles
     and returns a structured DiagnoseResponse as a dict.
@@ -41,23 +41,61 @@ def run_diagnose_task(report_id: str, report_data: dict, target_os: Literal['LIN
     compatible_profiles: list[str] = []
     recommendations: list[str] = []
 
-    active_python_version = report_data.get("active_python", {}).get("version", "3.10") if report_data.get("active_python") else "3.10"
+    import logging
+    logger = logging.getLogger(__name__)
+
+    active_python = report_data.get("active_python")
+    if not active_python or not active_python.get("version"):
+        raise ValueError("Diagnostic report is missing active_python version.")
+    
+    parts = active_python["version"].split(".")
+    if len(parts) < 2:
+        raise ValueError(f"Invalid Python version format: {active_python['version']}")
+    active_python_version = f"{parts[0]}.{parts[1]}"
+    
     cuda_version = report_data.get("cuda", {}).get("version") if report_data.get("cuda") else None
     rocm_version = report_data.get("rocm", {}).get("version") if report_data.get("rocm") else None
 
-    for profile_dict in profiles_data:
-        profile_slug: str = profile_dict.get("slug", "")
-        os_support: list[str] = profile_dict.get("os_support", [])
-        cuda_required: bool = profile_dict.get("cuda_required", False)
-        rocm_required: bool = profile_dict.get("rocm_required", False)
+    # We will fetch profiles from DB directly here in the worker
+    import asyncio
+    from app.database import AsyncSessionLocal
+    from app.services.profile_service import list_profiles
+    from app.schemas.profile import ProfileFilters
+
+    async def _fetch_profiles():
+        all_profiles = []
+        page = 1
+        async with AsyncSessionLocal() as db:
+            while True:
+                batch, total = await list_profiles(
+                    db,
+                    ProfileFilters(tags=None, os=None, cuda_required=None, page=page, limit=100),
+                )
+                all_profiles.extend(batch)
+                if len(all_profiles) >= total:
+                    break
+                page += 1
+        return all_profiles
+    
+    try:
+        profiles = asyncio.run(_fetch_profiles())
+    except Exception as exc:
+        logger.exception("Failed to fetch profiles for run_diagnose_task")
+        raise
+
+    for profile in profiles:
+        profile_slug: str = profile.slug
+        os_support: list[str] = profile.os_support
+        cuda_required: bool = profile.cuda_required
+        rocm_required: bool = getattr(profile, "rocm_required", False)
         
         packages = []
-        for pkg in profile_dict.get("packages", []):
+        for pkg in sorted(profile.packages, key=lambda item: item.install_order):
             packages.append(
                 PackageConstraint(
-                    name=pkg.get("package_name", ""),
-                    version_spec=pkg.get("version_spec", ""),
-                    cuda_variant=pkg.get("cuda_variant"),
+                    name=pkg.package_name,
+                    version_spec=pkg.version_spec,
+                    cuda_variant=pkg.cuda_variant,
                 )
             )
 
@@ -100,7 +138,8 @@ def run_diagnose_task(report_id: str, report_data: dict, target_os: Literal['LIN
                 )
             )
         except Exception as exc:
-            pass # Or log it
+            logger.exception("Unexpected error resolving profile %s", profile_slug)
+            raise
 
     response = DiagnoseResponse(
         report_id=report_id,
