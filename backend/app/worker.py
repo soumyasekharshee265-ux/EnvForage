@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from celery import Celery
 
@@ -29,10 +29,12 @@ celery_app.conf.update(
 )
 
 
-@celery_app.task(name="run_diagnose_task")
+@celery_app.task(name="run_diagnose_task")  # type: ignore[misc]
 def run_diagnose_task(
-    report_id: str, report_data: dict, target_os: Literal["LINUX", "WIN", "WSL"]
-) -> dict:
+    report_id: str,
+    report_data: dict[str, Any],
+    target_os: Literal["LINUX", "WIN", "WSL"],
+) -> dict[str, Any]:
     """
     Celery task that resolves an environment's dependencies against all profiles
     and returns a structured DiagnoseResponse as a dict.
@@ -70,7 +72,7 @@ def run_diagnose_task(
     from app.schemas.profile import ProfileFilters
     from app.services.profile_service import list_profiles
 
-    async def _fetch_profiles():
+    async def _fetch_profiles() -> list[Any]:
         all_profiles = []
         page = 1
         async with AsyncSessionLocal() as db:
