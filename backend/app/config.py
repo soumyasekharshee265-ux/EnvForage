@@ -136,11 +136,25 @@ class Settings(BaseSettings):
         # Validate localhost CORS origin in production
         if self.environment == "production":
             for origin in self.allowed_origins_list:
-                normalized = origin.strip().lower().rstrip("/")
-                if normalized == "http://localhost:3000":
+                parsed_origin = urllib.parse.urlparse(origin)
+                hostname = parsed_origin.hostname
+                if hostname in ("localhost", "127.0.0.1", "[::1]", "::1"):
                     raise ValueError(
-                        "Localhost CORS origin 'http://localhost:3000' is not allowed in production"
+                        f"Localhost CORS origin '{origin}' is not allowed in production"
                     )
+
+            # Block localhost database URLs in production
+            try:
+                parsed_db = urllib.parse.urlparse(self.database_url)
+                hostname = parsed_db.hostname
+                if hostname in ("localhost", "127.0.0.1", "[::1]", "::1"):
+                    raise ValueError(
+                        "Localhost database URL is not allowed in production environment"
+                    )
+            except Exception as e:
+                if isinstance(e, ValueError):
+                    raise
+                pass
 
         # Validate custom_template_dir
         if self.custom_template_dir:
